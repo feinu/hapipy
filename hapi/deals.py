@@ -1,5 +1,6 @@
-from base import BaseClient
-import logging_helper
+from .base import BaseClient
+from . import logging_helper
+from .utils import prettify
 
 
 DEALS_API_VERSION = '1'
@@ -27,3 +28,28 @@ class DealsClient(BaseClient):
         data = data or {}
         return self._call('deal/%s' % key, data=data,
                           method='PUT', **options)
+
+    def get_all(self, limit=None, offset=0, **options):
+        finished = False
+        output = []
+        offset = 0
+        querylimit = 250  # Max value according to docs
+        while not finished:
+            batch = self._call(
+                'deal/paged', method='GET',
+                params={'limit': querylimit, 'offset': offset,
+                        'properties': ['associations', 'dealname', 'dealstage',
+                                       'pipeline', 'hubspot_owner_id',
+                                       'description', 'closedate', 'amount',
+                                       'dealtype', 'createdate'],
+                        'includeAssociations': True},
+                doseq=True, **options
+            )
+            output.extend([
+                prettify(deal, id_key='dealId')
+                for deal in batch['deals'] if not deal['isDeleted']
+            ])
+            finished = not batch['hasMore']
+            offset += batch['offset']
+
+        return output

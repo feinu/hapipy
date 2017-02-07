@@ -1,5 +1,5 @@
-from base import BaseClient
-import logging_helper
+from .base import BaseClient
+from . import logging_helper
 
 
 class OwnersClient(BaseClient):

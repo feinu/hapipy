@@ -1,5 +1,5 @@
-from base import BaseClient
-import logging_helper
+from .base import BaseClient
+from . import logging_helper
 
 
 ENGAGEMENTS_API_VERSION = '1'
@@ -27,3 +27,19 @@ class EngagementsClient(BaseClient):
         data = data or {}
         return self._call('engagements/%s' % key, data=data,
                           method='PUT', **options)
+
+    def get_all(self, **options):
+        finished = False
+        output = []
+        querylimit = 250  # Max value according to docs
+        offset = 0
+        while not finished:
+            batch = self._call(
+                'engagements/paged', method='GET',
+                params={'limit': querylimit, 'offset': offset}, **options
+            )
+            output.extend(batch['results'])
+            finished = not batch['hasMore']
+            offset = batch['offset']
+
+        return output

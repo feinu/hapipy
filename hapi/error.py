@@ -9,14 +9,14 @@ class EmptyResult(object):
         self.msg = ''
         self.reason = ''
 
-    def __nonzero__(self):
+    def __bool__(self):
         return False
 
 
 class HapiError(ValueError):
     """Any problems get thrown as HapiError exceptions with the relevant info inside"""
 
-    as_str_template = u'''
+    as_str_template = '''
 ---- request ----
 {method} {host}{url}, [timeout={timeout}]
 
@@ -73,11 +73,11 @@ class HapiError(ValueError):
 
     def _dict_vals_to_unicode(self, data):
         unicode_data = {}
-        for key, val in data.items():
-            if not isinstance(val, basestring):
-                unicode_data[key] = unicode(val)
-            elif not isinstance(val, unicode):
-                unicode_data[key] = unicode(val, 'utf8', 'ignore')
+        for key, val in list(data.items()):
+            if not isinstance(val, str):
+                unicode_data[key] = str(val)
+            elif not isinstance(val, str):
+                unicode_data[key] = str(val, 'utf8', 'ignore')
             else:
                 unicode_data[key] = val
         return unicode_data

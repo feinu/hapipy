@@ -1,5 +1,6 @@
-from base import BaseClient
-import logging_helper
+from .base import BaseClient
+from . import logging_helper
+from .utils import prettify
 
 
 COMPANIES_API_VERSION = '2'
@@ -27,3 +28,32 @@ class CompaniesClient(BaseClient):
         data = data or {}
         return self._call('companies/%s' % key, data=data,
                           method='PUT', **options)
+
+    def get(self, companyid, **options):
+        return self._call('companies/%s' % companyid, method='GET', **options)
+
+    def get_all(self, **options):
+        finished = False
+        output = []
+        offset = 0
+        querylimit = 250  # Max value according to docs
+        while not finished:
+            batch = self._call(
+                'companies/paged', method='GET', doseq=True,
+                params={
+                    'limit': querylimit,
+                    'offset': offset,
+                    'properties': ['name', 'description', 'address', 'address2',
+                                   'city', 'state',
+                                   'story', 'hubspot_owner_id'],
+                },
+                **options
+            )
+            output.extend([
+                prettify(company, id_key='companyId')
+                for company in batch['companies'] if not company['isDeleted']
+            ])
+            finished = not batch['has-more']
+            offset = batch['offset']
+
+        return output

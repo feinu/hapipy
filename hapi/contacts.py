@@ -1,5 +1,6 @@
-from base import BaseClient
-import logging_helper
+from .base import BaseClient
+from . import logging_helper
+from .utils import prettify
 
 
 CONTACTS_API_VERSION = '1'
@@ -60,3 +61,36 @@ class ContactsClient(BaseClient):
     def update(self, key, data={}, **options):
         return self._call('contact/vid/%s/profile' % key,
                           data=data, method='POST', **options)
+
+    def get_batch(self, ids):
+        batch = self._call('contact/vids/batch', method='GET', doseq=True,
+                           params={
+                               'vid': ids,
+                               'property': ['email', 'firstname', 'lastname',
+                                            'company', 'website', 'phone',
+                                            'address', 'city', 'state', 'zip',
+                                            'associatedcompanyid'],
+                           })
+        # It returns a dict with IDs as keys
+        return [prettify(batch[contact], id_key='vid')
+                for contact in batch]
+
+    def get_all(self, **options):
+        # Can't get phone number from a get-all, so we just grab IDs and
+        # then have to make ANOTHER call in batches
+        finished = False
+        output = []
+        offset = 0
+        querylimit = 100  # Max value according to docs
+        while not finished:
+            batch = self._call(
+                'lists/all/contacts/all', method='GET',
+                params={'count': querylimit, 'vidOffset': offset},
+                **options
+            )
+            output.extend(self.get_batch([contact['vid']
+                                          for contact in batch['contacts']]))
+            finished = not batch['has-more']
+            offset = batch['vid-offset']
+
+        return output

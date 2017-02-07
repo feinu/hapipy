@@ -1,18 +1,20 @@
 import time
-from base import BaseClient
-import logging_helper
-#from pprint import pprint
- 
+from .base import BaseClient
+from . import logging_helper
+# from pprint import pprint
 
 
 LEADS_API_VERSION = '1'
+
 
 def list_to_dict_with_python_case_keys(list_):
     d = {}
     for item in list_:
         d[item] = item
         if item.lower() != item:
-            python_variant = item[0].lower() + ''.join([c if c.lower()==c else '_%s'%c.lower() for c in item[1:]])
+            python_variant = item[0].lower() + ''.join(
+                [c if c.lower() == c else '_%s' % c.lower() for c in item[1:]]
+            )
             d[python_variant] = item
     return d
 
@@ -37,7 +39,7 @@ TIME_PIVOT_OPTIONS = [
 TIME_PIVOT_OPTIONS_DICT = list_to_dict_with_python_case_keys(TIME_PIVOT_OPTIONS)
 SEARCH_OPTIONS = [
     'search',
-    'sort', 
+    'sort',
     'dir',
     'max',
     'offset',
@@ -57,11 +59,13 @@ BOOLEAN_SEARCH_OPTIONS = set([
     'bounced',
     'isNotImported'])
 
-MAX_BATCH=100
+MAX_BATCH = 100
+
 
 class LeadsClient(BaseClient):
     """
-    The hapipy Leads client uses the _make_request method to call the API for data.  It returns a python object translated from the json return
+    The hapipy Leads client uses the _make_request method to call the API for
+    data.  It returns a python object translated from the json return
     """
 
     def __init__(self, *args, **kwargs):
@@ -84,56 +88,64 @@ class LeadsClient(BaseClient):
         return new_options
 
     def _get_path(self, subpath):
-        return 'leads/v%s/%s' % (self.options.get('version') or LEADS_API_VERSION, subpath)
-  
+        return 'leads/v%s/%s' % (self.options.get('version') or
+                                 LEADS_API_VERSION, subpath)
+
     def get_lead(self, guid, **options):
         return self.get_leads(guid, **options)[0]
 
+    def get(self, guid):
+        self.get_lead(guid)
+
     def get_leads(self, *guids, **options):
-        """Supports all the search parameters in the API as well as python underscored variants"""
+        """Supports all the search parameters in the API as well as python
+        underscored variants"""
         original_options = options
         options = self.camelcase_search_options(options.copy())
         params = {}
-        for i in xrange(len(guids)):
-            params['guids[%s]'%i] = guids[i]
-        for k in options.keys():
+        for i in range(len(guids)):
+            params['guids[%s]' % i] = guids[i]
+        for k in list(options.keys()):
             if k in SEARCH_OPTIONS:
                 params[k] = options[k]
                 del options[k]
         leads = self._call('list/', params, **options)
-        self.log.info("retrieved %s leads through API ( %soptions=%s )" % 
-                (len(leads), guids and 'guids=%s, '%guids or '', original_options))
+        self.log.info("retrieved %s leads through API ( %soptions=%s )" %
+                      (len(leads), guids and 'guids=%s, ' % guids or '',
+                       original_options))
         return leads
 
     def retrieve_lead(self, *guid, **options):
-        cur_guid = guid or '' 
+        cur_guid = guid or ''
         params = {}
         for key in options:
             params[key] = options[key]
         """ Set guid to -1 as default for not finding a user """
-        lead = {'guid' : '-1'}
-        """ wrap lead call so that it doesn't error out when not finding a lead """
+        lead = {'guid': '-1'}
+        # wrap lead call so that it doesn't error out when not finding a lead
         try:
             lead = self._call('lead/%s' % cur_guid, params, **options)
         except:
             """ no lead here """
         return lead
 
-
     def update_lead(self, guid, update_data=None, **options):
         update_data = update_data or {}
         update_data['guid'] = guid
-        return self._call('lead/%s/' % guid, data=update_data, method='PUT', **options)
-    
-    def get_webhook(self, **options):  #WTF are these 2 methods for?
+        return self._call('lead/%s/' % guid, data=update_data,
+                          method='PUT', **options)
+
+    def get_webhook(self, **options):  # WTF are these 2 methods for?
         return self._call('callback-url', **options)
-    
+
     def register_webhook(self, url, **options):
-        return self._call('callback-url', params={'url': url}, data={'url': url}, method='POST', **options)
-    
+        return self._call('callback-url', params={'url': url},
+                          data={'url': url}, method='POST', **options)
+
     def close_lead(self, guid, close_time=None, **options):
-        return self.update_lead(guid, {'closedAt': close_time or int(time.time()*1000)}, **options)
-    
+        return self.update_lead(
+            guid, {'closedAt': close_time or int(time.time() * 1000)}, **options
+        )
+
     def open_lead(self, guid, **options):
         self.update_lead(guid, {'closedAt': ''}, **options)
-

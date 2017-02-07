@@ -1,4 +1,4 @@
-from base import BaseClient
+from .base import BaseClient
 
 KEYWORDS_API_VERSION = 'v1'
 

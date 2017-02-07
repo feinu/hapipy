@@ -1,4 +1,4 @@
-from base import BaseClient
+from .base import BaseClient
 
 HUBSPOT_BROADCAST_API_VERSION = '1'
 
